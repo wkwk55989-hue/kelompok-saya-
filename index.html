@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SejarahMaze: Penjelajah Harta Karun Sejarah</title>
+<style>
+:root{--bg:#e6ede3;--fg:#1d2926;--card:#f6f8f2;--wall:#27312f;--path:#d8cda8;--ac:#8a6412;--on:#fff;--ok:#2f7a4f;--no:#b0382e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121817;--fg:#e6eee8;--card:#1c2523;--wall:#080b0a;--path:#80896f;--ac:#d6a93a;--on:#1a1405}}
+:root[data-theme="dark"]{--bg:#121817;--fg:#e6eee8;--card:#1c2523;--wall:#080b0a;--path:#80896f;--ac:#d6a93a;--on:#1a1405}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2{font-family:Georgia,"Times New Roman",serif;margin:0 0 6px}
+h1{font-size:21px}[hidden]{display:none!important}
+.app{max-width:940px;margin:auto;padding:10px;display:grid;gap:14px}
+@media(min-width:720px){.app{grid-template-columns:240px 1fr}}
+.p{border-left:4px solid var(--ac);padding:2px 0 2px 12px}
+.p b{display:block;margin-top:12px}.p ul{padding-left:18px;margin:4px 0;font-size:13px}
+#hp{font-size:22px}
+canvas{width:100%;max-width:480px;height:auto;display:block;margin:auto;border:4px solid var(--wall);border-radius:6px}
+.dp{display:grid;grid-template-columns:repeat(3,58px);gap:6px;justify-content:center;margin:12px 0}
+.dp button{height:48px;font-size:20px;padding:0}
+button{font:inherit;color:var(--fg);background:var(--card);border:2px solid var(--ac);border-radius:8px;padding:7px 12px;cursor:pointer;touch-action:manipulation}
+button:disabled{opacity:.5;cursor:default}
+.b{background:var(--ac);color:var(--on);font-weight:600}
+.o{display:block;width:100%;margin:7px 0;text-align:left}
+.o.ok{background:var(--ok);color:#fff;opacity:1}.o.no{background:var(--no);color:#fff;opacity:1}
+#m{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:12px;z-index:5}
+#mc{background:var(--card);border-radius:10px;padding:16px;max-width:540px;width:100%;max-height:92%;overflow:auto}
+pre{background:var(--wall);color:#f3ead0;padding:10px;border-radius:6px;overflow-x:auto;font-size:13px}
+input{font:inherit;width:110px;padding:7px;border:2px solid var(--ac);border-radius:8px;background:var(--bg);color:var(--fg)}
+#ts{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--wall);color:#fff;border:1px solid var(--ac);padding:8px 14px;border-radius:18px;z-index:6;max-width:92%;text-align:center}
+.cf{position:fixed;top:-30px;font-style:normal;z-index:9;pointer-events:none;animation:f 3s linear forwards}
+@keyframes f{to{transform:translateY(110vh) rotate(360deg)}}
+button{transition:transform .12s,background-color .2s}
+button:active:not(:disabled){transform:scale(.94)}
+.o:hover:not(:disabled){transform:translateX(4px)}
+.o.ok{animation:bn .45s}.o.no{animation:sk .35s}
+#m:not([hidden]){animation:fd .2s}
+#mc.in{animation:pp .24s cubic-bezier(.2,.9,.3,1.2)}
+#ts.in{animation:tp .22s}
+canvas.sh,#hp.sh{animation:sk .38s}
+#sc{display:inline-block!important;margin:0}#sc.pop{animation:bn .4s}
+@keyframes fd{from{opacity:0}}
+@keyframes pp{from{opacity:0;transform:translateY(14px) scale(.92)}}
+@keyframes tp{from{opacity:0;transform:translateX(-50%) translateY(12px)}}
+@keyframes sk{20%{transform:translateX(-6px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}
+@keyframes bn{40%{transform:scale(1.08)}}
+@media(prefers-reduced-motion:reduce){.cf{display:none}*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="app">
+<aside class="p">
+<h1>SejarahMaze</h1>
+<b>Status Penjelajah</b><div>🧑‍🔬 Arkeolog Muda</div>
+<div id="hp"></div><div>🏺 <span id="ar"></span> &nbsp; Skor <b style="display:inline" id="sc"></b></div>
+<b>Peralatan</b>
+<button id="tk">🧭 Kompas</button> <button id="tp">🗺️ Peta</button>
+<div id="tl" style="font-size:13px;margin-top:6px"></div>
+<b>Petunjuk</b>
+<ul><li>Gerak dengan tombol panah, WASD, atau tombol di layar.</li><li>Temukan 5 situs bernomor. Tiap situs punya 2 soal.</li><li>Jawaban salah mengurangi ❤️. Jebakan ⚠️ mengurangi skor.</li><li>Pintu 🔒 terbuka setelah 3 artefak dan soal kode.</li></ul>
+</aside>
+<main><canvas id="cv" width="450" height="450"></canvas>
+<div class="dp"><span></span><button data-k="-15" aria-label="Atas">⬆️</button><span></span><button data-k="-1" aria-label="Kiri">⬅️</button><button data-k="15" aria-label="Bawah">⬇️</button><button data-k="1" aria-label="Kanan">➡️</button></div></main>
+</div>
+<div id="m" hidden><div id="mc"></div></div><div id="ts" hidden></div>
+<script>
+const W=15,H=15,N=W*H,Z=30,$=i=>document.getElementById(i);
+let rs=123456789,g,door,sites,traps,ST,hl=[],A={fx:1,fy:1,tx:1,ty:1,s:0},face=1,PT=[],HK=0,NX=0;const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rnd=()=>(rs=rs*16807%2147483647)/2147483647;
+const D=[
+["Candi Borobudur","🛕","Candi megah di Magelang, Jawa Tengah, berbentuk punden berundak dengan stupa di puncaknya. Dindingnya dihiasi ribuan panel relief.",[
+["📜 Sejarah","Candi Borobudur dibangun pada abad ke-8 sampai ke-9. Oleh dinasti apa, dan peninggalan agama apa?",["Dinasti Sanjaya, Hindu","Dinasti Syailendra, Buddha","Kerajaan Majapahit, Hindu","Kerajaan Sriwijaya, Buddha"],1,"Candi ini berdiri di Jawa Tengah, bukan di Sumatra.","Dinasti Syailendra membangunnya di Jawa Tengah sebagai candi Buddha. Sriwijaya berpusat di Sumatra."],
+["🧮 Matematika","Jumlah stupa berlubang pada tiga teras bundar Borobudur adalah 32, 24, dan 16, membentuk barisan aritmetika. Jika dilanjutkan, berapa jumlah 4 suku pertamanya?",["72","80","88","96"],1,"Cari beda barisan, lalu tulis suku ke-4.","Beda = -8, suku ke-4 = 8, jadi 32 + 24 + 16 + 8 = 80."]]],
+["Candi Prambanan","🔱","Kompleks candi bermenara runcing di perbatasan Yogyakarta dan Jawa Tengah, dibangun abad ke-9. Dikenal lewat legenda Roro Jonggrang.",[
+["📜 Sejarah","Candi tertinggi di tengah kompleks Prambanan dipersembahkan untuk dewa Trimurti yang berperan sebagai apa?",["Pencipta (Brahma)","Pemelihara (Wisnu)","Pelebur (Siwa)","Penguasa petir (Indra)"],2,"Ingat peran tiga dewa Trimurti. Indra bukan bagian Trimurti.","Candi Siwa adalah candi utama Prambanan. Trimurti: Brahma (pencipta), Wisnu (pemelihara), Siwa (pelebur)."],
+["📖 English","Prambanan, a Hindu temple compound, ____ in the 9th century and ____ a UNESCO World Heritage Site since 1991.",["was built, has been","was built, was","has been built, has been","built, has been"],0,"Lihat penanda waktu: in the 9th century dan since 1991.","'in the 9th century' memakai simple past passive (was built). 'since 1991' memakai present perfect (has been)."]]],
+["Monas","🗼","Tugu setinggi 132 m di Medan Merdeka, Jakarta. Pengunjung bisa naik ke pelataran puncaknya.",[
+["📜 Sejarah","Monas dibangun atas gagasan Presiden Soekarno dan diresmikan tahun 1975. Apa makna lidah api berlapis emas di puncaknya?",["Semangat perjuangan bangsa yang tidak pernah padam","Kekayaan tambang emas Nusantara","Kejayaan kerajaan-kerajaan masa lampau","Mercusuar penunjuk arah kapal di Teluk Jakarta"],0,"Monas dibangun untuk mengenang perjuangan kemerdekaan.","Lidah api melambangkan semangat perjuangan bangsa Indonesia yang berkobar dan tidak pernah padam."],
+["🧮 Matematika","Tinggi tugu Monas 132 m. Dari suatu titik di tanah, puncak tugu terlihat dengan sudut elevasi 30° (abaikan tinggi pengamat). Berapa jarak titik itu ke kaki tugu?",["44√3 m","66√3 m","132 m","132√3 m"],3,"Pakai tan 30° = tinggi / jarak.","tan 30° = 132 / jarak, jadi jarak = 132 ÷ (1/√3) = 132√3 m (sekitar 229 m)."]]],
+["Museum Fatahillah","🏛️","Gedung bergaya Belanda di Kota Tua Jakarta yang kini menjadi museum sejarah kota.",[
+["📜 Sejarah","Museum Fatahillah dinamai dari Fatahillah, tokoh yang pada tahun 1527 merebut Sunda Kelapa dari Portugis. Nama apa yang ia berikan untuk kota itu?",["Batavia","Jayakarta","Betawi","Jakarta"],1,"Nama Batavia baru muncul di masa Belanda (1619).","Urutan nama: Sunda Kelapa, Jayakarta (1527), Batavia (Belanda, 1619), Jakarta (pendudukan Jepang, 1942)."],
+["💻 Coding","Apa output kode Python berikut?",["Lawa","Mona","Fatah","Fata"],3,"Indeks -2 dihitung dari belakang. [:4] mengambil 4 huruf pertama.","Indeks -2 adalah elemen kedua dari belakang ('Fatahillah'), lalu [:4] mengambil 4 huruf pertama: 'Fata'.",`situs = ["Borobudur", "Prambanan", "Monas", "Fatahillah", "Lawang Sewu"]\nprint(situs[-2][:4])`]]],
+["Lawang Sewu","🚪","Gedung megah di Semarang berjuluk 'Seribu Pintu' karena banyaknya pintu dan jendela besar. Dibangun sebagai kantor perusahaan kereta api masa Hindia Belanda.",[
+["📜 Sejarah","Di depan Lawang Sewu berdiri Tugu Muda untuk mengenang peristiwa Oktober 1945 di Semarang. Peristiwa apa itu?",["Pertempuran Lima Hari di Semarang","Bandung Lautan Api","Pertempuran Ambarawa","Peristiwa Rengasdengklok"],0,"Peristiwanya terjadi di kota Semarang sendiri.","Tugu Muda mengenang Pertempuran Lima Hari di Semarang antara pemuda Indonesia dan pasukan Jepang."],
+["📖 English","If the young archaeologist ____ her compass earlier, she would have found the exit of the maze sooner.",["used","had used","has used","would use"],1,"Ini pengandaian masa lalu. Perhatikan 'would have found'.","Third conditional: If + past perfect, would have + V3."]]]];
+const DQ=["💻 Coding","Ketik angka hasil output kode Python berikut:",0,"7","Hitung bilangan 1 sampai 15 yang habis dibagi 3 atau 5. Hati-hati dengan angka 15.","Kelipatan 3 atau 5 dari 1 sampai 15: 3, 5, 6, 9, 10, 12, 15, yaitu 7 angka (15 hanya dihitung sekali).","kode = 0\nfor i in range(1, 16):\n    if i % 3 == 0 or i % 5 == 0:\n        kode += 1\nprint(kode)"];
+function gen(){g=Array(N).fill(1);g[W+1]=0;const s=[W+1];
+ while(s.length){const u=s[s.length-1],r=u/W|0,c=u%W;
+  const nb=[[-2,0],[2,0],[0,-2],[0,2]].filter(([a,b])=>{const y=r+a,x=c+b;return y>0&&x>0&&y<H-1&&x<W-1&&g[y*W+x]});
+  if(!nb.length){s.pop();continue}
+  const [a,b]=nb[rnd()*nb.length|0];g[(r+a/2)*W+c+b/2]=0;g[(r+a)*W+c+b]=0;s.push((r+a)*W+c+b)}}
+function bfs(s,ok){const d=Array(N).fill(-1),p=Array(N).fill(-1),q=[s];d[s]=0;
+ for(let i=0;i<q.length;i++){const u=q[i];for(const k of[1,-1,W,-W]){const v=u+k;if(g[v]===0&&d[v]<0&&ok(v)){d[v]=d[u]+1;p[v]=u;q.push(v)}}}
+ return{d,p}}
+function pick(a,f,n,u){const o=[],sh=x=>x.slice().sort(()=>rnd()-.5),ok=i=>!u.concat(o).includes(i);
+ for(const i of sh(a).concat(sh(f)))if(o.length<n&&ok(i)&&u.concat(o).every(j=>Math.abs((i/W|0)-(j/W|0))+Math.abs(i%W-j%W)>4))o.push(i);
+ for(const i of sh(f))if(o.length<n&&ok(i))o.push(i);
+ return o}
+function setup(){gen();const B=bfs(W+1,()=>1);let far=W+1;
+ B.d.forEach((v,i)=>{if(v>B.d[far])far=i});
+ const P=[];for(let u=far;u>=0;u=B.p[u])P.unshift(u);
+ let di=P.length>>1;if(((P[di]/W|0)+P[di]%W)%2==0)di++;door=P[di];
+ const bh=u=>{for(;u>=0;u=B.p[u])if(u==door)return 1;return 0},de=i=>[1,-1,W,-W].filter(k=>g[i+k]===0).length==1,C=[];
+ B.d.forEach((v,i)=>{if(v>3&&i!=door)C.push(i)});
+ const A=C.filter(i=>!bh(i)),R=C.filter(i=>i!=far&&bh(i));
+ const a=pick(A.filter(de),A,3,[]),b=pick(R.filter(de),R,1,[far]);
+ sites={};[...a,...b,far].forEach((i,k)=>sites[i]=k);
+ const u=[...a,...b,far,door];traps=new Set(pick(C.filter(i=>!u.includes(i)),[],5,u))}
+function init(){ST={hp:3,sc:0,ar:0,wr:0,got:[],open:0,pos:W+1,tl:{k:1,p:1,l:1}};hl=[];A={fx:1,fy:1,tx:1,ty:1,s:0};face=1;PT=[];hud.s=0;hud.h=3;setup();hud();draw()}
+function draw(now){now=now||performance.now();const c=$("cv").getContext("2d"),s=getComputedStyle(document.documentElement),v=n=>s.getPropertyValue(n).trim(),WL=v("--wall"),PH=v("--path");
+ c.textAlign="center";c.textBaseline="middle";
+ for(let i=0;i<N;i++){const x=i%W*Z,y=(i/W|0)*Z,k=sites[i];
+  c.fillStyle=g[i]?WL:hl.includes(i)?"#f6c945":PH;c.fillRect(x,y,Z,Z);
+  let t=i==door&&!ST.open?"🔒":traps.has(i)?"⚠️":"";
+  if(k!==undefined){if(ST.got.includes(k))t="🏺";else{const pu=RM?0:Math.sin(now/350+k)*1.6;c.strokeStyle="#d4a01788";c.lineWidth=2;c.beginPath();c.arc(x+15,y+15,13+pu,0,7);c.stroke();c.fillStyle="#d4a017";c.beginPath();c.arc(x+15,y+15,11+pu/2,0,7);c.fill();c.fillStyle="#fff";c.font="bold 16px sans-serif";c.fillText(k+1,x+15,y+16)}}
+  if(t){c.font="18px serif";c.fillText(t,x+15,y+16)}
+  if(0){c.font="22px serif";c.fillText("🧑‍🔬",x+15,y+16)}}}
+function shk(e,c="sh"){e.classList.remove(c);void e.offsetWidth;e.classList.add(c)}
+function fx(e,n,c,f="bold 16px sans-serif",vx=0,vy=-1,gr=0){PT.push({e,x:n%W*Z+15,y:(n/W|0)*Z+12,c,f,vx,vy,gr,s:performance.now(),l:900})}
+function burst(n){for(let i=0;i<14;i++){const a=Math.random()*6.28;fx("✨",n,"#fff","16px serif",Math.cos(a),Math.sin(a),1)}}
+function act(now){const c=$("cv").getContext("2d"),t=Math.min(1,(now-A.s)/(RM?1:130)),e=1-(1-t)**3,hop=t<1?-Math.sin(t*Math.PI)*6:RM?0:Math.sin(now/450)*1.2,px=(A.fx+(A.tx-A.fx)*e)*Z+15,py=(A.fy+(A.ty-A.fy)*e)*Z+15;
+ c.textAlign="center";c.textBaseline="middle";c.fillStyle="#0003";c.beginPath();c.ellipse(px,py+11,8+hop/3,3,0,0,7);c.fill();
+ c.save();c.translate(px,py+hop);c.rotate(t<1?Math.sin(t*Math.PI)*.15*face:0);c.scale(face,1);c.font="22px serif";c.fillText("🧑‍🔬",0,1);c.restore();
+ PT=PT.filter(p=>now-p.s<p.l);c.shadowColor="#000a";c.shadowBlur=4;
+ for(const p of PT){const u=(now-p.s)/p.l;c.globalAlpha=1-u*u;c.font=p.f;c.fillStyle=p.c;c.fillText(p.e,p.x+p.vx*u*38,p.y+p.vy*u*38+p.gr*u*u*34)}
+ c.globalAlpha=1;c.shadowBlur=0}
+function loop(now){if(HK&&!ST.mv)mv(HK);draw(now);act(now);requestAnimationFrame(loop)}
+function hud(){if(hud.h>ST.hp)shk($("hp"));if(hud.s<ST.sc)shk($("sc"),"pop");hud.h=ST.hp;hud.s=ST.sc;$("hp").textContent="❤️".repeat(ST.hp)+"🖤".repeat(3-ST.hp);$("ar").textContent=ST.ar+"/5";$("sc").textContent=ST.sc;$("tk").disabled=!ST.tl.k;$("tp").disabled=!ST.tl.p;$("tl").textContent="🔍 Kaca pembesar: "+(ST.tl.l?"siap, pakai saat menjawab soal":"sudah dipakai")}
+function toast(t){const e=$("ts");e.textContent=t;e.hidden=false;shk(e,"in");clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
+function modal(h){$("mc").innerHTML=h;$("m").hidden=false;shk($("mc"),"in")}
+function hide(){$("m").hidden=true}
+function mv(k){if(!$("m").hidden)return;if(ST.mv){NX=k;return}const n=ST.pos+k;if(g[n])return;
+ if(n==door&&!ST.open){if(ST.ar<3)return toast("🔒 Pintu terkunci! Kumpulkan 3 artefak dulu.");return doorQ()}
+ const o=ST.pos;ST.pos=n;hl=[];ST.mv=1;if(k==1||k==-1)face=k;A={fx:o%W,fy:o/W|0,tx:n%W,ty:n/W|0,s:performance.now()};setTimeout(()=>{ST.mv=0;arrive(n);if(NX){const q=NX;NX=0;mv(q)}},RM?0:130)}
+function arrive(n){
+ if(traps.has(n)){traps.delete(n);shk($("cv"));fx("-30",n,"#ff6b5b");ST.sc=Math.max(0,ST.sc-30);toast("⚠️ Jebakan! Skor -30")}
+ draw();hud();const s=sites[n];if(s!==undefined&&!ST.got.includes(s))quiz(s)}
+function quiz(s){const d=D[s];modal(`<h2>${d[1]} ${d[0]}</h2><p>${d[2]}</p><button class="b" id="go">Mulai Soal</button> <button onclick="hide()">Nanti dulu</button>`);$("go").onclick=()=>ask(s,0)}
+function ask(s,i){const q=D[s][3][i],P=[0,1,2,3].sort(()=>Math.random()-.5);
+ modal(`<b>${q[0]}</b> <small>soal ${i+1} dari 2, ${i?150:100} poin</small><p>${q[1]}</p>${q[6]?`<pre>${q[6]}</pre>`:""}${P.map(j=>`<button class="o" data-j="${j}">${q[2][j]}</button>`).join("")}<div id="fb"></div>${ST.tl.l?'<button id="lens">🔍 Kaca pembesar (1×)</button>':""}`);
+ document.querySelectorAll(".o").forEach(b=>b.onclick=()=>pk(b,q,s,i));
+ if(ST.tl.l)$("lens").onclick=function(){ST.tl.l=0;this.hidden=true;hud();const w=[...document.querySelectorAll(".o")].filter(b=>+b.dataset.j!=q[3]&&!b.disabled&&!b.hidden);w[Math.random()*w.length|0].hidden=true}}
+function pk(b,q,s,i){
+ if(+b.dataset.j==q[3]){ST.sc+=i?150:100;document.querySelectorAll(".o").forEach(x=>x.disabled=true);b.classList.add("ok");
+  $("fb").innerHTML=`<p>✅ Benar! ${q[5]}</p><button class="b" id="nx">Lanjut</button>`;$("nx").onclick=()=>i?cl(s):ask(s,1);hud()}
+ else{ST.hp--;ST.wr++;b.disabled=true;b.classList.add("no");hud();if(ST.hp<1)return dead();$("fb").innerHTML=`<p>❌ Salah (❤️ -1). Petunjuk: ${q[4]}</p>`}}
+function doorQ(){const q=DQ;
+ modal(`<b>${q[0]}</b> <small>pintu terkunci, 150 poin</small><p>${q[1]}</p><pre>${q[6]}</pre><input id="ans" type="number" inputmode="numeric"> <button class="b" id="bt">Buka Pintu</button> <button onclick="hide()">Nanti dulu</button><div id="fb"></div>`);
+ $("bt").onclick=()=>{if($("ans").value.trim()==q[3]){ST.sc+=150;ST.open=1;burst(door);$("bt").disabled=true;$("fb").innerHTML=`<p>✅ Benar! Pintu terbuka. ${q[5]}</p><button class="b" onclick="hide()">Masuk</button>`;hud();draw()}
+  else{ST.hp--;ST.wr++;hud();if(ST.hp<1)return dead();$("fb").innerHTML=`<p>❌ Salah (❤️ -1). Petunjuk: ${q[4]}</p>`}}}
+function dead(){ST.hp=3;ST.pos=W+1;A={fx:1,fy:1,tx:1,ty:1,s:0};hl=[];shk($("cv"));hud();draw();modal(`<h2>💔 Hati habis!</h2><p>Kamu kembali ke pintu masuk dengan 3 hati baru. Artefak yang sudah didapat tetap aman.</p><button class="b" onclick="hide()">Lanjut</button>`)}
+function cl(s){ST.got.push(s);ST.ar++;hide();burst(ST.pos);fx("+250",ST.pos,"#fff");hud();draw();toast("🏺 Artefak "+ST.ar+"/5 didapat!");if(ST.ar==5)win()}
+function win(){const n=ST.wr<3?3:ST.wr<7?2:1;
+ modal(`<h2>🎉 Misi Selesai!</h2><p>Skor akhir: <b>${ST.sc}</b></p><p style="font-size:30px;margin:4px 0">${"⭐".repeat(n)}</p><p>Gelar: <b>${["","Arkeolog Pemula","Arkeolog Handal","Master Sejarah"][n]}</b></p><button class="b" onclick="init();hide()">Main Lagi</button>`);
+ for(let i=0;i<40;i++){const e=document.createElement("i");e.className="cf";e.textContent=["🎊","✨","🎉","🏺"][i%4];e.style.cssText=`left:${Math.random()*100}vw;animation-delay:${Math.random()*2}s`;document.body.append(e);setTimeout(()=>e.remove(),5500)}}
+function route(){const B=bfs(ST.pos,v=>v!=door||ST.open);let b=-1;
+ for(const i in sites)if(!ST.got.includes(sites[i])&&B.d[i]>0&&(b<0||B.d[i]<B.d[b]))b=+i;
+ if(b<0){toast("Situs berikutnya ada di balik pintu terkunci 🔒");return}
+ const P=[];for(let u=b;u!=ST.pos;u=B.p[u])P.unshift(u);return P}
+$("tk").onclick=()=>{const P=route();if(!P)return;ST.tl.k=0;toast("🧭 Situs terdekat "+P.length+" langkah. Mulai ke "+{"-1":"kiri ⬅️","1":"kanan ➡️",[-W]:"atas ⬆️",[W]:"bawah ⬇️"}[P[0]-ST.pos]);hud()};
+$("tp").onclick=()=>{const P=route();if(!P)return;ST.tl.p=0;hl=P;draw();hud();setTimeout(()=>{hl=[];draw()},6000)};
+addEventListener("keydown",e=>{const k={ArrowUp:-W,ArrowDown:W,ArrowLeft:-1,ArrowRight:1,w:-W,s:W,a:-1,d:1}[e.key];if(k&&$("m").hidden){e.preventDefault();HK=k;if(!e.repeat)mv(k)}});["keyup","blur"].forEach(v=>addEventListener(v,()=>{HK=0}));
+document.querySelectorAll("[data-k]").forEach(b=>{const k=+b.dataset.k,up=()=>{if(HK==k)HK=0};b.onpointerdown=e=>{e.preventDefault();HK=k;mv(k)};b.onpointerup=b.onpointerleave=b.onpointercancel=up;b.onclick=e=>{if(!e.detail)mv(k)}});
+requestAnimationFrame(loop);init();modal(`<h2>🗺️ SejarahMaze</h2><p>Profesor Sejarah memberimu peta kuno yang menunjukkan 5 harta karun di situs bersejarah Indonesia. Jelajahi labirin, jawab soal Sejarah, Matematika, Coding, dan English, lalu kumpulkan 5 artefak!</p><button class="b" onclick="hide()">Mulai Petualangan</button>`);
+</script></body></html>
